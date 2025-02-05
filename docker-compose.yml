@@ -1,0 +1,85 @@
+version: "3.8"
+services:
+  # 1) Приложение на Python (Flask)
+  web:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: web
+    ports:
+      - "5000:5000"  # чтобы при необходимости обратиться напрямую
+    depends_on:
+      - db
+      - redis
+      - elasticsearch
+    networks:
+      - marketplace_net
+
+  # 2) Nginx
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"  # основной порт для входящих соединений
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+    networks:
+      - marketplace_net
+
+  # 3) PostgreSQL
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER=marketplace_user
+      - POSTGRES_PASSWORD=marketplace_password
+      - POSTGRES_DB=marketplace_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - marketplace_net
+
+  # 4) Redis
+  redis:
+    image: redis:latest
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - marketplace_net
+
+  # 5) Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false  # упрощённый режим без аутентификации
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - marketplace_net
+    ports:
+      - "9200:9200"  # для доступа извне (опционально)
+
+  # 6) Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    networks:
+      - marketplace_net
+
+networks:
+  marketplace_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  esdata:

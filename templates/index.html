@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Маркетплейс</title>
+</head>
+<body>
+    <h1>Маркетплейс (прототип)</h1>
+    <form method="POST" action="/">
+        <input type="text" name="search_query" placeholder="Поиск товаров" value="{{ query }}">
+        <button type="submit">Искать</button>
+    </form>
+    <hr />
+    <div class="products-container">
+        {% for product in products %}
+            <div class="product-card">
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.description }}</p>
+                <strong>{{ product.price }} руб.</strong>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
