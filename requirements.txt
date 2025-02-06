@@ -1,5 +1,5 @@
 flask==2.2.3
-requests==2.28.1
-psycopg2==2.9.5      # для работы с PostgreSQL
+flask-sqlalchemy==3.0.2
+psycopg2==2.9.5      # для работы с PostgreSQL (используется SQLAlchemy для подключения)
 redis==4.5.1         # для работы с Redis
 elasticsearch==8.5.3 # для Elastic (привести к нужной версии)
