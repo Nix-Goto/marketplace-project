@@ -1,24 +1,45 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
     <title>Маркетплейс</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Маркетплейс (прототип)</h1>
-    <form method="POST" action="/">
-        <input type="text" name="search_query" placeholder="Поиск товаров" value="{{ query }}">
-        <button type="submit">Искать</button>
-    </form>
-    <hr />
+    <header>
+        <h1>Маркетплейс</h1>
+        <nav>
+            <a href="{{ url_for('add_product') }}" class="btn">Добавить товар</a>
+        </nav>
+    </header>
+
+    <div class="search-container">
+        <form method="POST" action="/">
+            <input type="text" name="search_query" placeholder="Поиск товаров..." value="{{ query }}">
+            <button type="submit">Поиск</button>
+        </form>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <div class="products-container">
         {% for product in products %}
-            <div class="product-card">
-                <h3>{{ product.name }}</h3>
-                <p>{{ product.description }}</p>
-                <strong>{{ product.price }} руб.</strong>
-            </div>
+        <div class="product-card">
+            {% if product.image_url %}
+            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+            {% endif %}
+            <h3>{{ product.name }}</h3>
+            <p class="category">{{ product.category }}</p>
+            <p class="description">{{ product.description }}</p>
+            <p class="price">{{ "%.2f"|format(product.price) }} ₽</p>
+            <p class="date">Добавлено: {{ product.created_at.strftime('%d.%m.%Y') }}</p>
+        </div>
         {% endfor %}
     </div>
 </body>

@@ -1,24 +1,21 @@
-FROM python:3.9-slim
-
-# Установка системных зависимостей
-RUN apt-get update && apt-get install -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
-
-# Установка Poetry
-RUN pip install poetry
+FROM python:3.12
 
 WORKDIR /usr/src/app
 
-# Сначала копируем файлы, отвечающие за зависимости
-COPY pyproject.toml poetry.lock* ./
+# Устанавливаем curl для healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Затем копируем исходный код проекта (убедитесь, что папка с вашим проектом присутствует)
-# Предположим, что ваш пакет находится в директории 'marketplace_project'
-COPY marketplace_project/ ./marketplace_project/
+# Копируем файлы зависимостей
+COPY requirements.txt .
 
-# Теперь устанавливаем зависимости и сам проект
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+# Устанавливаем зависимости
+RUN pip install -r requirements.txt
 
-# Копируем оставшиеся файлы (если необходимо)
-# COPY . .
+# Копируем код приложения
+COPY . .
 
-CMD ["python", "app.py"]
+# Открываем порт
+EXPOSE 5000
+
+# Запускаем приложение через flask run
+CMD ["flask", "run", "--host=0.0.0.0"]

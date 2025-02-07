@@ -1,46 +1,67 @@
 version: "3.8"
 services:
-  # 1) Приложение на Python (Flask)
-  web:
+  # 1) Backend на Python (Flask)
+  backend:
     build: 
       context: ./app
       dockerfile: Dockerfile
-    container_name: web
+    container_name: backend
     ports:
       - "5000:5000"
     depends_on:
-      - db
-      - redis
-      - elasticsearch
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     networks:
       - marketplace_net
+    environment:
+      # Устанавливаем переменные окружения
+      - FLASK_APP=marketplace_project.main
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/products"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # 2) Nginx
-  nginx:
-    image: nginx:latest
-    container_name: nginx
+  # 2) Frontend на React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - "8080:8080"
     depends_on:
-      - web
+      backend:
+        condition: service_healthy
     networks:
       - marketplace_net
 
   # 3) PostgreSQL
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: postgres_db
     environment:
-      - POSTGRES_USER=marketplace_user
-      - POSTGRES_PASSWORD=marketplace_password
-      - POSTGRES_DB=marketplace_db
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=postgres
+    ports:
+      - "6432:5432"
     networks:
       - marketplace_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   # 4) Redis
   redis:
@@ -49,6 +70,11 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     networks:
       - marketplace_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # 5) Elasticsearch
   elasticsearch:
@@ -57,12 +83,19 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
       - esdata:/usr/share/elasticsearch/data
     networks:
       - marketplace_net
     ports:
       - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'status.*green\\|status.*yellow'"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # 6) Grafana
   grafana:
